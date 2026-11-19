@@ -16,7 +16,7 @@ The plugin connects directly to the DoorBird. It needs no DoorBird cloud account
 - Configurable chime, music pause, video path and microphone source.
 - Custom call buttons and cards with Home Assistant actions and live entity states.
 - Home Assistant switches for ringing, chime and screen wake, plus a chime-volume number and status sensors.
-- English and German viewer texts.
+- German settings, commands and triggers, plus English and German viewer texts.
 - Chime-only operation on headless Kiosk Satellite devices.
 
 ## Requirements
@@ -36,7 +36,7 @@ The plugin connects directly to the DoorBird. It needs no DoorBird cloud account
 3. Review the source, requested capabilities and README, then choose **Trust and install**.
 4. Enable **DoorBird Intercom** and open its settings.
 
-For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.1.zip`. Update without uninstalling to retain settings.
+For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.2.zip`. Update without uninstalling to retain settings.
 
 ## Setup
 

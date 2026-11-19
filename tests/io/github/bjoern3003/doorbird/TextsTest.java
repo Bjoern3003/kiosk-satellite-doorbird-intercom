@@ -48,7 +48,7 @@ public final class TextsTest {
         Matcher options = Pattern.compile("\"key\": \"language\".*?\"options\": \\[([^\\]]*)\\]").matcher(manifest);
         if (!options.find()) throw new AssertionError("no Language setting in the manifest");
         List<String> expected = new ArrayList<>();
-        expected.add("\"Automatic\"");
+        expected.add("\"Automatisch\"");
         for (String name : languages.values()) expected.add("\"" + name + "\"");
         check(options.group(1).replace(", ", ",").trim(), String.join(",", expected));
 

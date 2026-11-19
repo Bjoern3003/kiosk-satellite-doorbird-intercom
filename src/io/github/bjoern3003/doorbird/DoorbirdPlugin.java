@@ -919,21 +919,23 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
             username = string(values, "username");
             password = string(values, "password");
             name = string(values, "name");
-            language = string(values, "language");
-            String mic = string(values, "microphone");
-            microphone = mic.isEmpty() ? "Automatic" : mic;
+            language = string(values, "language").equals("Automatisch") ? "Automatic" : string(values, "language");
+            microphone = microphone(string(values, "microphone"));
             String rate = string(values, "micRate");
-            micRate = rate.isEmpty() ? "Automatic" : micRate(rate);
-            pushToTalk = string(values, "talkMode").equals("Push to talk");
+            micRate = rate.isEmpty() || rate.equals("Automatisch") ? "Automatic" : rate;
+            String talkMode = string(values, "talkMode");
+            pushToTalk = talkMode.equals("Push to talk") || talkMode.equals("Push-to-Talk");
             chime = !Boolean.FALSE.equals(values.get("chime"));
             Object chimeLevel = values.get("chimeVolume");
             chimeVolume = chimeLevel instanceof Number ? Math.max(0, Math.min(100, ((Number) chimeLevel).intValue())) : 40;
-            String sound = string(values, "chimeStream");
-            chimeStream = java.util.Arrays.asList(Chime.STREAMS).contains(sound) ? sound : "Notifications";
+            chimeStream = chimeStream(string(values, "chimeStream"));
             String pause = string(values, "musicPause");
-            musicPause = pause.equals("At the ring") || pause.equals("At Speaker or Answer") ? pause : "Off";
+            musicPause = pause.equals("Beim Klingeln") ? "At the ring" : pause.equals("Bei Lautsprecher oder Annehmen") ? "At Speaker or Answer"
+                : pause.equals("At the ring") || pause.equals("At Speaker or Answer") ? pause : "Off";
             String restore = string(values, "restoreScreen");
-            restoreScreen = java.util.Arrays.asList(ScreenRestore.MODES).contains(restore) ? restore : ScreenRestore.WHEN_NOT_ANSWERED;
+            restoreScreen = restore.equals("Immer") ? ScreenRestore.ALWAYS : restore.equals("Nie") ? ScreenRestore.NEVER
+                : restore.equals("Wenn nicht angenommen") ? ScreenRestore.WHEN_NOT_ANSWERED
+                : java.util.Arrays.asList(ScreenRestore.MODES).contains(restore) ? restore : ScreenRestore.WHEN_NOT_ANSWERED;
             wakeScreen = !Boolean.FALSE.equals(values.get("wakeScreen"));
             ring = !Boolean.FALSE.equals(values.get("ring"));
             autoCloseMillis = autoClose(string(values, "autoClose"));
@@ -950,28 +952,47 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
             cards = Cards.parse(values.get("cards"));
             callButtons = Cards.parseCallButtons(values.get("callButtons"));
             String column = string(values, "landscapeColumn");
-            columnPosition = column.startsWith("Centred") ? DoorbellView.COLUMN_CENTRE : column.startsWith("At the top") ? DoorbellView.COLUMN_TOP : DoorbellView.COLUMN_BOTTOM;
+            columnPosition = column.startsWith("Centred") || column.equals("Zentriert") ? DoorbellView.COLUMN_CENTRE
+                : column.startsWith("At the top") || column.equals("Oben") ? DoorbellView.COLUMN_TOP : DoorbellView.COLUMN_BOTTOM;
         }
 
         String name(Texts texts) { return name.isEmpty() ? texts.defaultName() : name; }
         boolean configured() { return !host.isEmpty() && !username.isEmpty() && !password.isEmpty(); }
         boolean sameConnection(Settings other) { return host.equals(other.host) && username.equals(other.username) && password.equals(other.password); }
 
-        private static String micRate(String value) { return value.isEmpty() ? "Automatic" : value; }
+        private static String microphone(String value) {
+            switch (value) {
+                case "Sprachkommunikation": return "Voice communication";
+                case "Mikrofon": return "Microphone";
+                case "Spracherkennung": return "Voice recognition";
+                case "Unbearbeitet": return "Unprocessed";
+                case "": case "Automatisch": return "Automatic";
+                default: return value;
+            }
+        }
+        private static String chimeStream(String value) {
+            switch (value) {
+                case "Benachrichtigungen": return "Notifications";
+                case "Medien": return "Media";
+                case "Alarm": return "Alarm";
+                case "Notifications": case "Media": return value;
+                default: return "Notifications";
+            }
+        }
         private static long autoClose(String choice) {
             switch (choice) {
-                case "Off": return 0;
-                case "30 seconds": return 30_000;
-                case "2 minutes": return 120_000;
-                case "5 minutes": return 300_000;
+                case "Off": case "Aus": return 0;
+                case "30 seconds": case "30 Sekunden": return 30_000;
+                case "2 minutes": case "2 Minuten": return 120_000;
+                case "5 minutes": case "5 Minuten": return 300_000;
                 default: return 60_000;
             }
         }
         private static long maxCall(String choice) {
             switch (choice) {
-                case "Off": return 0;
-                case "5 minutes": return 300_000;
-                case "30 minutes": return 1_800_000;
+                case "Off": case "Aus": return 0;
+                case "5 minutes": case "5 Minuten": return 300_000;
+                case "30 minutes": case "30 Minuten": return 1_800_000;
                 default: return 600_000;
             }
         }

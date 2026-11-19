@@ -17,7 +17,7 @@ import java.util.Properties;
 /**
  * Everything the plugin shows by itself: the viewer, its readings, status and the connection check, in the language
  * files under assets/i18n (one per language, English the reference; see the README's Translations). The settings page
- * comes from the manifest, which Kiosk Satellite shows as written (English). A text a translation leaves out shows in
+ * comes from the manifest, which Kiosk Satellite shows as written (German). A text a translation leaves out shows in
  * English.
  */
 final class Texts {

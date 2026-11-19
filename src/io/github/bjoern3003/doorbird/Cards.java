@@ -57,7 +57,7 @@ final class Cards {
             return list + "." + row + ".action";
         }
 
-        /** Whether it shows in this state of the call: Show "In a call" also counts listening, not only talking. */
+        /** Whether it shows in this state of the call: the in-call option also counts listening. */
         boolean shownWhen(RingController.State state) {
             switch (show) {
                 case RINGING: return state == RingController.State.RINGING;
@@ -109,7 +109,7 @@ final class Cards {
             String entity = text(row.get("entity"));
             if (!hasAction && entity.isEmpty()) continue;
             cards.add(new Card(CARDS, i, Role.CARD, text(row.get("label")), text(row.get("icon")), entity, hasAction, Boolean.TRUE.equals(row.get("confirm")),
-                text(row.get("style")).startsWith("Button"), color(row), show(row)));
+                text(row.get("style")).startsWith("Button") || text(row.get("style")).equals("Schaltfläche"), color(row), show(row)));
         }
         return Collections.unmodifiableList(cards);
     }
@@ -136,7 +136,9 @@ final class Cards {
             if (!(rows.get(i) instanceof Map)) continue;
             Map<?, ?> row = (Map<?, ?>) rows.get(i);
             String kind = text(row.get("button"));
-            Role role = kind.startsWith("Answer") ? Role.ANSWER : kind.startsWith("Speaker") ? Role.SPEAKER : kind.startsWith("Hang up") ? Role.HANG_UP : Role.CARD;
+            Role role = kind.startsWith("Answer") || kind.startsWith("Annehmen") ? Role.ANSWER
+                : kind.startsWith("Speaker") || kind.startsWith("Lautsprecher") ? Role.SPEAKER
+                : kind.startsWith("Hang up") || kind.startsWith("Ablehnen") ? Role.HANG_UP : Role.CARD;
             if (role != Role.CARD) {
                 if (seen.add(role)) buttons.add(new Card(CALL_BUTTONS, i, role, "", "", "", false, false, true, 0, Show.ALWAYS));
                 continue;
@@ -149,9 +151,10 @@ final class Cards {
         return Collections.unmodifiableList(buttons);
     }
 
-    /** The fixed colour of a card whose Colour is "Fixed colour", as 0xFFRRGGBB (the manifest's green without one); 0 follows the state. */
+    /** The fixed colour as 0xFFRRGGBB (the manifest's green without one); 0 follows the state. */
     static int color(Map<?, ?> row) {
-        return text(row.get("colorMode")).startsWith("Fixed") ? hex(text(row.get("color")), 0xFF2E7D32) : 0;
+        String mode = text(row.get("colorMode"));
+        return mode.startsWith("Fixed") || mode.equals("Feste Farbe") ? hex(text(row.get("color")), 0xFF2E7D32) : 0;
     }
 
     /** #RRGGBB as 0xFFRRGGBB, or fallback when it is not one. */
@@ -161,7 +164,8 @@ final class Cards {
 
     private static Show show(Map<?, ?> row) {
         String show = text(row.get("show"));
-        return show.startsWith("While ringing") ? Show.RINGING : show.startsWith("In a call") ? Show.CALL : Show.ALWAYS;
+        return show.startsWith("While ringing") || show.equals("Während es klingelt") ? Show.RINGING
+            : show.startsWith("In a call") || show.equals("Im Anruf") ? Show.CALL : Show.ALWAYS;
     }
 
     /** The card's look from the entity's latest snapshot (KS's getHaEntityState format), or null before the first. */
