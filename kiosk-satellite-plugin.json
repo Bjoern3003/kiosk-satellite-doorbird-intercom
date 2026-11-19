@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "apiVersion": 1,
+  "id": "doorbird-intercom",
+  "name": "DoorBird Intercom",
+  "version": "1.0.0",
+  "minAndroidSdk": 26,
+  "minAppVersion": "2026.10.42",
+  "entryClass": "io.github.bjoern3003.doorbird.DoorbirdPlugin",
+  "description": "Rings the panel for a local DoorBird call button and opens live video. Listen, talk, use quick actions and control ringing from Home Assistant. No cloud or restreamer required.",
+  "author": "Björn Fischer",
+  "license": "Apache-2.0",
+  "icon": "icon.png",
+  "capabilities": ["overlay", "host.read", "host.control", "entities"],
+  "headless": true,
+  "settings": [
+    {"key": "host", "type": "string", "title": "DoorBird address", "default": "", "group": "DoorBird", "description": "IP address or hostname of the DoorBird on your local network, for example 192.168.1.50. Do not include http://."},
+    {"key": "username", "type": "string", "title": "Username", "default": "", "group": "DoorBird", "description": "A DoorBird user, usually ending in 0001. Give it Watch always permission for manual live view outside a ring."},
+    {"key": "password", "type": "secret", "title": "Password", "default": "", "group": "DoorBird"},
+    {"key": "rtspPort", "type": "number", "title": "RTSP port", "default": 554, "min": 1, "max": 65535, "step": 1, "group": "DoorBird", "description": "Normally 554. Change it only if your DoorBird uses another RTSP port."},
+    {"key": "name", "type": "string", "title": "Name", "default": "", "group": "DoorBird", "description": "Shown at the top of the viewer. Empty shows Front door, in the plugin's language."},
+    {"key": "ring", "type": "boolean", "title": "Ring on this device", "default": true, "group": "Ringing", "description": "Off: a press does not play the chime, wake the screen or open the call screen here. Last ring and the Doorbell pressed trigger still follow presses."},
+    {"key": "chime", "type": "boolean", "title": "Play a chime", "default": true, "group": "Ringing", "description": "A ding-dong when the button is pressed."},
+    {"key": "chimeVolume", "type": "number", "title": "Chime volume", "default": 40, "min": 5, "max": 100, "step": 5, "group": "Ringing", "description": "How loud the chime itself is. 40 is a soft chime, 100 as loud as it goes."},
+    {"key": "chimeStream", "type": "select", "title": "Chime sound", "default": "Notifications", "options": ["Notifications", "Media", "Alarm"], "group": "Ringing", "description": "Which Android volume the chime follows."},
+    {"key": "musicPause", "type": "select", "title": "Pause music", "default": "Off", "options": ["Off", "At the ring", "At Speaker or Answer"], "group": "Ringing", "description": "Pauses the kiosk's music during a doorbell call, and resumes it when the viewer closes. Only music that was playing is paused and resumed."},
+    {"key": "wakeScreen", "type": "boolean", "title": "Wake the screen", "default": true, "group": "Ringing", "description": "Turn the screen on and close the screensaver when the button is pressed."},
+    {"key": "restoreScreen", "type": "select", "title": "Restore the screen", "default": "When not answered", "options": ["When not answered", "Always", "Never"], "group": "Ringing", "description": "After a ring woke the screen, turn it off again or start its previous screensaver once the call screen closes."},
+    {"key": "autoClose", "type": "select", "title": "Close the viewer after", "default": "1 minute", "options": ["30 seconds", "1 minute", "2 minutes", "5 minutes", "Off"], "group": "Ringing", "description": "After a doorbell press, while nobody touches it. Speaker or Answer stop the countdown. Opened by hand, it stays open."},
+    {"key": "maxCall", "type": "select", "title": "End a call after", "default": "10 minutes", "options": ["5 minutes", "10 minutes", "30 minutes", "Off"], "group": "Ringing", "description": "Once answered or opened by hand, so a forgotten call does not keep the room on the line."},
+    {"key": "stream", "type": "select", "title": "Video", "default": "Default", "options": ["Default", "720p", "1080p"], "group": "Video and audio", "description": "Default uses /mpeg/media.amp. The explicit 720p and 1080p paths depend on the DoorBird model and firmware."},
+    {"key": "callVolume", "type": "number", "title": "Call volume", "default": 70, "min": 0, "max": 100, "step": 5, "group": "Video and audio", "description": "How loud the doorbell plays on the panel. The viewer has a slider for it too."},
+    {"key": "microphone", "type": "select", "title": "Microphone", "default": "Automatic", "options": ["Automatic", "Camcorder", "Voice communication", "Microphone", "Voice recognition", "Unprocessed"], "group": "Video and audio", "description": "Which Android microphone source talks to the door. Automatic takes the first that opens, Camcorder first."},
+    {"key": "talkMode", "type": "select", "title": "Talk mode", "default": "Hands free", "options": ["Hands free", "Push to talk"], "group": "Video and audio", "description": "Hands free keeps the microphone open during a call. Push to talk sends your voice only while you hold the microphone button and turns the door's sound down meanwhile."},
+    {"key": "micRate", "type": "select", "title": "Microphone sample rate", "default": "Automatic", "options": ["Automatic", "16000 Hz", "48000 Hz", "8000 Hz"], "group": "Video and audio", "description": "The rate the microphone is opened at. DoorBird audio itself is always converted to 8000 Hz."},
+    {"key": "callMode", "type": "boolean", "title": "Android call mode", "default": true, "group": "Video and audio", "description": "Switches Android to call mode on the loudspeaker during a call, which most devices need for echo cancelling."},
+    {"key": "wakeWordRestore", "type": "boolean", "title": "Wake word muted by a call", "default": false, "group": "Video and audio", "description": "Managed by the plugin.", "visibleWhen": {"key": "host", "equals": "__internal__"}},
+    {"key": "musicRestore", "type": "boolean", "title": "Music paused by a call", "default": false, "group": "Video and audio", "description": "Managed by the plugin.", "visibleWhen": {"key": "host", "equals": "__internal__"}},
+    {"key": "language", "type": "select", "title": "Language", "default": "Automatic", "options": ["Automatic", "English", "Deutsch"], "group": "Video and audio", "description": "For the viewer, readings and messages. Automatic follows the panel's Android language."},
+    {"key": "callButtons", "type": "list", "title": "Call buttons", "group": "Call screen", "addTitle": "Add button",
+      "default": [{"button": "Answer / Microphone"}, {"button": "Speaker"}, {"button": "Hang up / End call"}],
+      "description": "The round buttons at the bottom of the call screen, in this order. Add your own actions, such as opening a door through Home Assistant.",
+      "row": {"title": "button", "subtitle": ["label", "action"], "icon": "icon"},
+      "fields": [
+        {"key": "button", "type": "select", "title": "Button", "default": "Action", "options": ["Answer / Microphone", "Speaker", "Hang up / End call", "Action"]},
+        {"key": "label", "type": "string", "title": "Label", "visibleWhen": {"key": "button", "equals": "Action"}},
+        {"key": "icon", "type": "icon", "title": "Icon", "visibleWhen": {"key": "button", "equals": "Action"}},
+        {"key": "action", "type": "action", "title": "Action", "default": {}, "visibleWhen": {"key": "button", "equals": "Action"}},
+        {"key": "color", "type": "color", "title": "Button colour", "default": "#5F6368", "visibleWhen": {"key": "button", "equals": "Action"}},
+        {"key": "show", "type": "select", "title": "Show", "default": "Always", "options": ["Always", "While ringing", "In a call"], "visibleWhen": {"key": "button", "equals": "Action"}},
+        {"key": "confirm", "type": "boolean", "title": "Hold to run", "default": false, "visibleWhen": {"key": "button", "equals": "Action"}}
+      ]},
+    {"key": "cards", "type": "list", "title": "Cards", "group": "Call screen", "addTitle": "Add card", "default": [], "description": "Cards above the call buttons. Each can run a chosen action and show a Home Assistant entity's live state.",
+      "row": {"title": "label", "subtitle": ["entity", "action"], "icon": "icon"},
+      "fields": [
+        {"key": "label", "type": "string", "title": "Label"},
+        {"key": "icon", "type": "icon", "title": "Icon"},
+        {"key": "entity", "type": "entity", "title": "State", "description": "A Home Assistant entity whose state the card shows. Optional."},
+        {"key": "action", "type": "action", "title": "Action", "default": {}},
+        {"key": "confirm", "type": "boolean", "title": "Hold to run", "default": false},
+        {"key": "style", "type": "select", "title": "Style", "default": "Tile", "options": ["Tile", "Button"]},
+        {"key": "colorMode", "type": "select", "title": "Colour", "default": "Follow the state", "options": ["Follow the state", "Fixed colour"]},
+        {"key": "color", "type": "color", "title": "Card colour", "default": "#2E7D32", "visibleWhen": {"key": "colorMode", "equals": "Fixed colour"}},
+        {"key": "show", "type": "select", "title": "Show", "default": "Always", "options": ["Always", "While ringing", "In a call"]}
+      ]},
+    {"key": "landscapeColumn", "type": "select", "title": "Landscape column", "group": "Call screen", "default": "At the bottom", "options": ["At the bottom", "Centred", "At the top"]}
+  ],
+  "buttons": [
+    {"id": "check", "title": "Check the DoorBird", "label": "Check", "group": "DoorBird", "description": "Checks credentials, encrypted event setup, video, listening and talking.", "visibleWhen": {"key": "host", "notEmpty": true}}
+  ],
+  "commands": [
+    {"id": "show", "title": "Open"},
+    {"id": "testRing", "title": "Test ring"},
+    {"id": "dismiss", "title": "Close"}
+  ],
+  "triggers": [
+    {"id": "doorbellPressed", "title": "Doorbell pressed"},
+    {"id": "callScreenOpened", "title": "Call screen opened"},
+    {"id": "callScreenClosed", "title": "Call screen closed"},
+    {"id": "answered", "title": "Answered"},
+    {"id": "missedRing", "title": "Missed ring"}
+  ]
+}

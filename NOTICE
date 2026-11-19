@@ -1,0 +1,21 @@
+DoorBird Intercom for Kiosk Satellite
+Copyright 2026 Björn Fischer
+
+This product includes software from:
+
+- Reolink Doorbell Intercom for Kiosk Satellite
+  Copyright 2026 patrick11994
+  https://github.com/patrick11994/ks-reolink-doorbell-intercom
+  Apache-2.0. The call-screen interface, ring state machine, audio helpers,
+  RTSP/RTP implementation, build tools and general tests are derived from it.
+
+- Kiosk Satellite plugin SDK, template and build tools
+  https://github.com/jxlarrea/kiosk-satellite-plugins
+  Apache-2.0.
+
+DoorBird event monitoring, HTTP Digest session handling, DoorBird audio streaming
+and the original ChaCha20-Poly1305 implementation use the public DoorBird LAN API:
+https://www.doorbird.com/downloads/api_lan.pdf?rev=0.36
+
+DoorBird is a trademark of Bird Home Automation GmbH. This project is not
+affiliated with or endorsed by Bird Home Automation, Kiosk Satellite or Home Assistant.
