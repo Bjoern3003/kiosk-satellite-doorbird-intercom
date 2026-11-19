@@ -27,6 +27,22 @@ class BuildManifestTest(unittest.TestCase):
                 with self.subTest(version=version), self.assertRaises(ValueError):
                     build_manifest(path, version)
 
+    def test_number_settings_fit_the_slider_limit(self):
+        root = Path(__file__).resolve().parents[1]
+        manifest = json.loads((root / 'kiosk-satellite-plugin.json').read_text(encoding='utf-8'))
+
+        def check(settings):
+            for setting in settings:
+                if setting.get('type') == 'number' and setting.get('input', 'slider') == 'slider':
+                    steps = (setting['max'] - setting['min']) / setting['step']
+                    self.assertLessEqual(steps, 10000, setting['key'])
+                if setting.get('type') == 'list':
+                    check(setting.get('fields', []))
+
+        check(manifest['settings'])
+        rtsp = next(setting for setting in manifest['settings'] if setting['key'] == 'rtspPort')
+        self.assertEqual(rtsp.get('input'), 'field')
+
 
 if __name__ == '__main__':
     unittest.main()

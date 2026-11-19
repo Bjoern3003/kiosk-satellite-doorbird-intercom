@@ -36,7 +36,7 @@ The plugin connects directly to the DoorBird. It needs no DoorBird cloud account
 3. Review the source, requested capabilities and README, then choose **Trust and install**.
 4. Enable **DoorBird Intercom** and open its settings.
 
-For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.0.zip`. Update without uninstalling to retain settings.
+For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.1.zip`. Update without uninstalling to retain settings.
 
 ## Setup
 
