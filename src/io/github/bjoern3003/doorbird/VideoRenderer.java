@@ -62,9 +62,7 @@ final class VideoRenderer implements MediaStream.VideoSink {
     VideoRenderer(Surface surface, Listener listener) {
         this.surface = surface;
         this.listener = listener;
-        thread = new Thread(this::run, "doorbird-video");
-        thread.setDaemon(true);
-        thread.start();
+        thread = ThreadGuard.start("doorbird-video", this::run);
     }
 
     @Override public void onVideo(byte[] annexB, long micros, boolean keyframe) {

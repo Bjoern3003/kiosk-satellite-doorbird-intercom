@@ -52,9 +52,7 @@ final class MicCapture {
         this.choice = choice;
         this.rates = rates(rateChoice);
         this.listener = listener;
-        thread = new Thread(this::run, "doorbird-mic");
-        thread.setDaemon(true);
-        thread.start();
+        thread = ThreadGuard.start("doorbird-mic", this::run);
     }
 
     /** Push to talk: true drops the microphone's audio instead of sending it, false sends it again. */
@@ -106,9 +104,21 @@ final class MicCapture {
             echo = null;
         }
         try {
-            recorder.startRecording();
-            if (recorder.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
-                listener.onMicState("the microphone is in use elsewhere");
+            boolean recording = false;
+            long retryUntil = System.nanoTime() + 4_000_000_000L;
+            while (running && !recording && System.nanoTime() < retryUntil) {
+                try {
+                    recorder.startRecording();
+                    recording = recorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING;
+                } catch (RuntimeException busy) {
+                    // Voice Satellite may still be releasing its capture after the asynchronous mute.
+                }
+                if (!recording) {
+                    try { Thread.sleep(100); } catch (InterruptedException stopped) { Thread.currentThread().interrupt(); return; }
+                }
+            }
+            if (!recording) {
+                listener.onMicState("the microphone stayed unavailable for 4 seconds");
                 return;
             }
             listener.onMicState("live, " + opened + " " + rate + " Hz, echo canceller " + (echo != null && echo.getEnabled() ? "on" : "none"));
@@ -138,7 +148,7 @@ final class MicCapture {
                 }
                 if (n > 0 && !muted) talk.write(out, n);
             }
-        } catch (RuntimeException error) {
+        } catch (Throwable error) {
             if (running) listener.onMicState("microphone: " + error);
         } finally {
             try {

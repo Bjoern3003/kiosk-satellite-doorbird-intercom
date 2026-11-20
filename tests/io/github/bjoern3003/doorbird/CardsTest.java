@@ -10,6 +10,7 @@ import java.util.Map;
 
 public final class CardsTest {
     public static void main(String[] args) {
+        Texts.setAssets(name -> new java.io.FileInputStream(System.getProperty("doorbird.assets", "assets") + "/" + name));
         Texts en = Texts.of("English");
 
         // Rows without an action or entity are skipped, but keep their place for runAction's path.

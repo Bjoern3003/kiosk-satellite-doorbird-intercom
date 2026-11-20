@@ -18,6 +18,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import io.github.bjoern3003.doorbird.ThreadGuard;
 
 /**
  * A small RTSP client with RTP interleaved over the same TCP connection: DESCRIBE (digest auth), SETUP, PLAY, a
@@ -125,10 +126,7 @@ public final class RtspSession {
      * stopped (a half-open connection keeps accepting the keepalives for minutes). 0 waits forever, for a backchannel.
      */
     public synchronized void start(Listener listener, String threadName, long silenceMillis) {
-        Thread thread = new Thread(() -> read(listener, silenceMillis), threadName);
-        thread.setDaemon(true);
-        reader = thread;
-        thread.start();
+        reader = ThreadGuard.start(threadName, () -> read(listener, silenceMillis));
     }
 
     /** Sends one RTP packet on an interleaved channel, for the backchannel. Safe from any thread. */

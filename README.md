@@ -16,7 +16,7 @@ The plugin connects directly to the DoorBird. It needs no DoorBird cloud account
 - Configurable chime, music pause, video path and microphone source.
 - Custom call buttons and cards with Home Assistant actions and live entity states.
 - Home Assistant switches for ringing, chime and screen wake, plus a chime-volume number and status sensors.
-- German settings, commands and triggers, plus English and German viewer texts.
+- English settings, commands and triggers, plus English and German viewer texts.
 - Chime-only operation on headless Kiosk Satellite devices.
 
 ## Requirements
@@ -46,7 +46,7 @@ Or search for `DoorBird Intercom` in **Settings > Plugin Manager > Browse plugin
 3. Review the source, requested capabilities and README, then choose **Trust and install**.
 4. Enable **DoorBird Intercom** and open its settings.
 
-For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.3.zip`. Update without uninstalling to retain settings.
+For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.4.zip`. Update without uninstalling to retain settings.
 
 ## Setup
 
@@ -134,4 +134,4 @@ On Windows, use `py` instead of `python3` if that is how Python is installed.
 
 The interface, ring state machine, common audio helpers, RTSP/RTP implementation and build tools are derived from [Reolink Doorbell Intercom](https://github.com/patrick11994/ks-reolink-doorbell-intercom), Apache-2.0. The SDK originates from the [Kiosk Satellite plugin template](https://github.com/jxlarrea/kiosk-satellite-plugins). DoorBird protocol behavior follows the public [DoorBird LAN API 0.36](https://www.doorbird.com/downloads/api_lan.pdf?rev=0.36).
 
-Licensed under [Apache-2.0](LICENSE). See [NOTICE](NOTICE). DoorBird is a trademark of its owner; this is an independent community plugin.
+Licensed under [Apache-2.0](LICENSE). See [NOTICE](NOTICE). DoorBird is a trademark of Bird Home Automation GmbH. This project is not affiliated with or endorsed by Bird Home Automation, Kiosk Satellite or Home Assistant.

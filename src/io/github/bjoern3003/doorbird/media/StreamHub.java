@@ -2,6 +2,7 @@
 package io.github.bjoern3003.doorbird.media;
 
 import java.util.Collections;
+import io.github.bjoern3003.doorbird.ThreadGuard;
 
 /**
  * One live doorbell stream over RTSP (H.264 or H.265 video + AAC audio) for the length of a ring. It starts as soon as the button
@@ -32,10 +33,7 @@ public final class StreamHub implements MediaStream {
         if (running || stopped) return;  // one stream per object: a late start after stop() must not open it again
         running = true;
         hub.start();
-        Thread thread = new Thread(this::connect, "doorbird-stream-start");
-        thread.setDaemon(true);
-        starter = thread;
-        thread.start();
+        starter = ThreadGuard.start("doorbird-stream-start", this::connect);
     }
 
     @Override public void stop() {

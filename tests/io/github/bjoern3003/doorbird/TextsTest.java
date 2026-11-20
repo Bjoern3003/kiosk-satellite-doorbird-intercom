@@ -2,6 +2,7 @@
 package io.github.bjoern3003.doorbird;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -23,6 +24,7 @@ public final class TextsTest {
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\w+\\}");
 
     public static void main(String[] args) throws Exception {
+        Texts.setAssets(name -> new FileInputStream(System.getProperty("doorbird.assets", "assets") + "/" + name));
         Map<String, String> english = Texts.read("en");
         if (english.size() < 50) throw new AssertionError("en.properties not found or short: " + english.size());
 
@@ -48,7 +50,7 @@ public final class TextsTest {
         Matcher options = Pattern.compile("\"key\": \"language\".*?\"options\": \\[([^\\]]*)\\]").matcher(manifest);
         if (!options.find()) throw new AssertionError("no Language setting in the manifest");
         List<String> expected = new ArrayList<>();
-        expected.add("\"Automatisch\"");
+        expected.add("\"Automatic\"");
         for (String name : languages.values()) expected.add("\"" + name + "\"");
         check(options.group(1).replace(", ", ",").trim(), String.join(",", expected));
 

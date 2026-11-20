@@ -3,18 +3,14 @@ package io.github.bjoern3003.doorbird;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-/**
- * Mutes Kiosk Satellite's wake word while door audio plays or the microphone is on, so the doorbell's sound cannot
- * set it off and the two microphone captures do not compete. It only unmutes what it muted itself: a wake word the
- * user had muted stays muted. Whether it muted is remembered across sessions (a call cut off by a crash or an update
- * would otherwise leave the wake word muted for good), and restore() puts it back at the next start.
- */
+/** Mutes Voice Satellite only while needed and restores only a mute owned by this plugin. */
 final class WakeWordGuard {
-    /** The host commands this needs, as a seam for tests. */
     interface Host {
         void command(String name, Map<String, Object> arguments, Result result);
-        /** Remembers whether this plugin muted the wake word, in a setting that survives restarts. */
         void remember(boolean mutedByUs);
     }
 
@@ -23,53 +19,84 @@ final class WakeWordGuard {
     }
 
     private final Host host;
-    private boolean wanted;  // the call wants the wake word quiet
+    private boolean wanted;
     private boolean mutedByUs;
-    private boolean busy;  // a read or a mute command is on its way
+    private boolean busy;
+    private boolean closed;
+    private int unmuteFailures;
+    private ScheduledExecutorService retry;
 
     WakeWordGuard(Host host) {
         this.host = host;
     }
 
-    /** The session started: if a previous one muted the wake word and never got to unmute it, unmute it now. */
     synchronized void restore(boolean rememberedMutedByUs) {
-        if (!rememberedMutedByUs) return;
+        if (!rememberedMutedByUs || closed) return;
         mutedByUs = true;
-        settle();
+        busy = true;
+        command("getWakeWordState", Collections.<String, Object>emptyMap(), (ok, data) -> {
+            synchronized (WakeWordGuard.this) {
+                busy = false;
+                if (closed) return;
+                Map<?, ?> state = ok && data instanceof Map ? (Map<?, ?>) data : null;
+                if (state == null) {
+                    scheduleRestore();
+                    return;
+                }
+                if (!Boolean.TRUE.equals(state.get("available")) || !Boolean.TRUE.equals(state.get("muted"))) {
+                    mutedByUs = false;
+                    host.remember(false);
+                    return;
+                }
+                settle();
+            }
+        });
     }
 
-    /** Door audio or the microphone went on (true) or both are off again (false). */
     synchronized void setActive(boolean active) {
+        if (closed) return;
         wanted = active;
+        if (active) unmuteFailures = 0;
         settle();
     }
 
-    /** Brings the wake word to what the call wants, one command at a time. */
+    synchronized void close() {
+        closed = true;
+        wanted = false;
+        if (retry != null) retry.shutdownNow();
+    }
+
     private void settle() {
-        if (busy) return;
+        if (busy || closed) return;
         if (wanted && !mutedByUs) {
             busy = true;
-            host.command("getWakeWordState", Collections.<String, Object>emptyMap(), (ok, data) -> {
+            command("getWakeWordState", Collections.<String, Object>emptyMap(), (ok, data) -> {
                 Map<?, ?> state = ok && data instanceof Map ? (Map<?, ?>) data : null;
                 boolean canMute = state != null && Boolean.TRUE.equals(state.get("available")) && !Boolean.TRUE.equals(state.get("muted"));
                 if (!canMute) {
-                    finish(false);  // no wake word, or the user muted it: leave it alone
+                    finish(false);
                     return;
                 }
-                host.command("setWakeWordMuted", Collections.<String, Object>singletonMap("muted", Boolean.TRUE), (muted, ignored) -> {
+                command("setWakeWordMuted", Collections.<String, Object>singletonMap("muted", Boolean.TRUE), (muted, ignored) -> {
                     if (muted) host.remember(true);
                     finish(muted);
                 });
             });
         } else if (!wanted && mutedByUs) {
             busy = true;
-            host.command("setWakeWordMuted", Collections.<String, Object>singletonMap("muted", Boolean.FALSE), (unmuted, ignored) -> {
+            command("setWakeWordMuted", Collections.<String, Object>singletonMap("muted", Boolean.FALSE), (unmuted, ignored) -> {
                 synchronized (WakeWordGuard.this) {
                     busy = false;
+                    if (closed) return;
                     mutedByUs = !unmuted;
-                    if (unmuted) host.remember(false);
-                    // A failed unmute is not retried in a loop; the remembered flag brings it back at the next start.
-                    if (unmuted) settle();
+                    if (unmuted) {
+                        unmuteFailures = 0;
+                        host.remember(false);
+                        settle();
+                    } else {
+                        host.remember(true);
+                        scheduleUnmute();
+                    }
                 }
             });
         }
@@ -78,7 +105,43 @@ final class WakeWordGuard {
     private synchronized void finish(boolean muted) {
         busy = false;
         mutedByUs = muted;
-        // Leave it as it is when the read refused (no wake word, or muted by the user) until the call ends.
         if (muted || !wanted) settle();
+    }
+
+    private void command(String name, Map<String, Object> arguments, Result result) {
+        try {
+            host.command(name, arguments, result);
+        } catch (Throwable unavailable) {
+            result.done(false, null);
+        }
+    }
+
+    private void scheduleUnmute() {
+        if (closed || wanted || unmuteFailures >= 5) return;
+        unmuteFailures++;
+        try {
+            executor().schedule(() -> ThreadGuard.run(() -> {
+                synchronized (WakeWordGuard.this) { settle(); }
+            }), 1, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.RejectedExecutionException ignored) {}
+    }
+
+    private void scheduleRestore() {
+        if (closed || unmuteFailures >= 5) return;
+        unmuteFailures++;
+        try {
+            executor().schedule(() -> ThreadGuard.run(() -> restore(true)), 1, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.RejectedExecutionException ignored) {}
+    }
+
+    private synchronized ScheduledExecutorService executor() {
+        if (retry == null) {
+            retry = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread thread = new Thread(() -> ThreadGuard.run(r), "doorbird-wake-word-retry");
+                thread.setDaemon(true);
+                return thread;
+            });
+        }
+        return retry;
     }
 }

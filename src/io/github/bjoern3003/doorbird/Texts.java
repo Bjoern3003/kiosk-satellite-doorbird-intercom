@@ -2,7 +2,6 @@
 package io.github.bjoern3003.doorbird;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -27,7 +26,7 @@ final class Texts {
     }
 
     static final String DIR = "i18n/";
-    private static volatile Assets assets = Texts::fromDisk;
+    private static volatile Assets assets = name -> { throw new IOException("Plugin assets are not configured"); };
     private static final Map<String, Map<String, String>> loaded = new HashMap<>();  // guarded by itself
 
     private final Map<String, String> texts, english;
@@ -37,7 +36,7 @@ final class Texts {
         this.english = english;
     }
 
-    /** Where the language files come from; the plugin sets the host's assets, tests and tools read them from disk. */
+    /** Where the language files come from; production uses only the host's verified plugin assets. */
     static void setAssets(Assets source) {
         assets = source;
         synchronized (loaded) {
@@ -112,11 +111,6 @@ final class Texts {
             if (!texts.containsKey(key)) texts.put(key, properties.getProperty(key));
         }
         return texts;
-    }
-
-    /** For tests and tools: the files in the repository's assets folder (-Ddoorbird.assets, else ./assets). */
-    private static InputStream fromDisk(String name) throws IOException {
-        return new FileInputStream(System.getProperty("doorbird.assets", "assets") + "/" + name);
     }
 
     /** A text by key, in this language or else English; the key itself if neither has it, so a gap shows. */

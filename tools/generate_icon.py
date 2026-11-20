@@ -62,8 +62,6 @@ def centered(text, y, font_size, color):
     draw.text((512 - (box[2] - box[0]) / 2, y), text, font=face, fill=color)
 
 
-centered('DoorBird', 74, 34, '#505B55')
-
 def camera_ellipse(bounds, color):
     center_x, center_y, scale = 512, 243, 0.78
     scaled = tuple(round(value) for value in (

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.bjoern3003.doorbird.talk;
 
+import io.github.bjoern3003.doorbird.ThreadGuard;
 import io.github.bjoern3003.doorbird.api.DoorbirdHttp;
 
 /** Microphone audio to DoorBird's audio-transmit.cgi, paced as 8 kHz G.711 mu-law. */
@@ -26,9 +27,7 @@ public final class DoorbirdTalk implements TalkChannel {
     @Override public synchronized void start() {
         if (running) return;
         running = true;
-        thread = new Thread(this::run, "doorbird-talk");
-        thread.setDaemon(true);
-        thread.start();
+        thread = ThreadGuard.start("doorbird-talk", this::run);
     }
 
     @Override public void stop() {

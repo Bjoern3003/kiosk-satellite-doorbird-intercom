@@ -16,6 +16,7 @@ final class CallMode {
     private final AudioManager audio;
     private int previousMode = -1;
     private boolean previousSpeakerphone;
+    private AudioDeviceInfo previousDevice;
 
     CallMode(Context context) {
         audio = (AudioManager) context.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
@@ -30,6 +31,7 @@ final class CallMode {
             audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
             String route = "no loudspeaker";
             if (Build.VERSION.SDK_INT >= 31) {
+                previousDevice = audio.getCommunicationDevice();
                 for (AudioDeviceInfo device : audio.getAvailableCommunicationDevices()) {
                     if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
                         route = audio.setCommunicationDevice(device) ? "loudspeaker" : "loudspeaker refused";
@@ -53,7 +55,8 @@ final class CallMode {
         if (previousMode < 0) return;
         try {
             if (Build.VERSION.SDK_INT >= 31) {
-                audio.clearCommunicationDevice();
+                if (previousDevice != null) audio.setCommunicationDevice(previousDevice);
+                else audio.clearCommunicationDevice();
             } else {
                 audio.setSpeakerphoneOn(previousSpeakerphone);
             }
@@ -62,5 +65,6 @@ final class CallMode {
             // Nothing more to do.
         }
         previousMode = -1;
+        previousDevice = null;
     }
 }

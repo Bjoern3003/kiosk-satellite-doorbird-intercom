@@ -18,6 +18,10 @@ public final class DoorbirdEventsTest {
         check(event.intercomId, "ghikzi");
         check(event.button, "1");
         check(event.timestamp, 1699550033L);
+        check(DoorbirdEvents.freshTimestamp(event, event.timestamp + 300), true);
+        check(DoorbirdEvents.freshTimestamp(event, event.timestamp - 300), true);
+        check(DoorbirdEvents.freshTimestamp(event, event.timestamp + 301), false);
+        check(DoorbirdEvents.freshTimestamp(event, event.timestamp - 301), false);
         check(DoorbirdEvents.decode(packet, KEY.getBytes(StandardCharsets.US_ASCII), "abcdef0001") == null, true);
         byte[] changed = packet.clone();
         changed[20] ^= 1;

@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import io.github.bjoern3003.doorbird.ThreadGuard;
 
 /** DoorBird event monitoring v2: authenticated UDP broadcasts on ports 6524 and 35344. */
 public final class DoorbirdEvents {
@@ -51,9 +52,7 @@ public final class DoorbirdEvents {
     public synchronized void start() {
         if (running) return;
         running = true;
-        starter = new Thread(this::open, "doorbird-events-setup");
-        starter.setDaemon(true);
-        starter.start();
+        starter = ThreadGuard.start("doorbird-events-setup", this::open);
     }
 
     public void stop() {
@@ -92,10 +91,7 @@ public final class DoorbirdEvents {
                         synchronized (this) {
                             if (!running) { socket.close(); return; }
                             sockets.add(socket);
-                            Thread thread = new Thread(() -> receive(socket, session.notificationKey), "doorbird-events-" + port);
-                            thread.setDaemon(true);
-                            threads.add(thread);
-                            thread.start();
+                            threads.add(ThreadGuard.start("doorbird-events-" + port, () -> receive(socket, session.notificationKey)));
                         }
                     } catch (Exception refused) {
                         if (sockets.isEmpty()) listener.onConnection(false, describe(refused));
@@ -121,7 +117,7 @@ public final class DoorbirdEvents {
             try {
                 socket.receive(packet);
                 Event event = decode(Arrays.copyOfRange(packet.getData(), packet.getOffset(), packet.getOffset() + packet.getLength()), key, username);
-                if (event == null || duplicate(event)) continue;
+                if (event == null || !freshTimestamp(event, System.currentTimeMillis() / 1000) || duplicate(event)) continue;
                 listener.onRing(event.button);
             } catch (SocketTimeoutException quiet) {
                 // Poll running once a second.
@@ -129,6 +125,11 @@ public final class DoorbirdEvents {
                 if (running && !socket.isClosed()) listener.onConnection(false, describe(closed));
             }
         }
+    }
+
+    public static boolean freshTimestamp(Event event, long nowSeconds) {
+        long age = nowSeconds - event.timestamp;
+        return age >= -300 && age <= 300;
     }
 
     private boolean duplicate(Event event) {

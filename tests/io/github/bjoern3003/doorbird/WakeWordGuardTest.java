@@ -11,6 +11,7 @@ public final class WakeWordGuardTest {
     private static final class FakeHost implements WakeWordGuard.Host {
         final List<String> log = new ArrayList<>();
         boolean available = true, muted;
+        int failedUnmutes;
         Boolean remembered;
 
         @Override public void command(String name, Map<String, Object> arguments, WakeWordGuard.Result result) {
@@ -21,7 +22,14 @@ public final class WakeWordGuardTest {
                 state.put("muted", muted);
                 result.done(true, state);
             } else {
-                muted = Boolean.TRUE.equals(arguments.get("muted"));
+                boolean mute = Boolean.TRUE.equals(arguments.get("muted"));
+                if (!mute && failedUnmutes > 0) {
+                    failedUnmutes--;
+                    log.add("unmute failed");
+                    result.done(false, null);
+                    return;
+                }
+                muted = mute;
                 log.add(muted ? "mute" : "unmute");
                 result.done(true, null);
             }
@@ -34,7 +42,7 @@ public final class WakeWordGuardTest {
         String take() { String all = String.join(", ", log); log.clear(); return all; }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         FakeHost host = new FakeHost();
         WakeWordGuard guard = new WakeWordGuard(host);
         guard.setActive(true);
@@ -64,11 +72,29 @@ public final class WakeWordGuardTest {
         FakeHost next = new FakeHost();
         next.muted = true;
         new WakeWordGuard(next).restore(true);
-        check(next.take(), "unmute");
+        check(next.take(), "read, unmute");
         check(next.muted, false);
         check(next.remembered, false);
         new WakeWordGuard(next).restore(false);
         check(next.take(), "");
+
+        FakeHost changed = new FakeHost();
+        changed.muted = false;
+        new WakeWordGuard(changed).restore(true);
+        check(changed.take(), "read");
+        check(changed.remembered, false);
+
+        FakeHost retryHost = new FakeHost();
+        WakeWordGuard retryGuard = new WakeWordGuard(retryHost);
+        retryGuard.setActive(true);
+        retryHost.take();
+        retryHost.failedUnmutes = 1;
+        retryGuard.setActive(false);
+        check(retryHost.take(), "unmute failed");
+        check(retryHost.remembered, true);
+        Await.until(() -> !retryHost.muted && retryHost.log.contains("unmute"), 6000, "wake-word unmute retried");
+        check(retryHost.remembered, false);
+        retryGuard.close();
         System.out.println("WakeWordGuardTest passed");
     }
 

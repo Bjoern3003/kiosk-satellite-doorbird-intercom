@@ -25,9 +25,7 @@ final class DoorbirdAudioRenderer {
     DoorbirdAudioRenderer(DoorbirdHttp api, Listener listener) {
         this.api = api;
         this.listener = listener;
-        thread = new Thread(this::run, "doorbird-audio");
-        thread.setDaemon(true);
-        thread.start();
+        thread = ThreadGuard.start("doorbird-audio", this::run);
     }
 
     void setGain(float gain) {

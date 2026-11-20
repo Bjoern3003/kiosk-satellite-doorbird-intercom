@@ -24,9 +24,7 @@ final class Chime {
 
     /** percent is the Chime volume setting, stream one of STREAMS; log hears why a chime may stay silent. */
     static void play(int percent, String stream, Consumer<String> log) {
-        Thread thread = new Thread(() -> playNow(percent, stream, log), "doorbird-chime");
-        thread.setDaemon(true);
-        thread.start();
+        ThreadGuard.start("doorbird-chime", () -> playNow(percent, stream, log));
     }
 
     private static void playNow(int percent, String stream, Consumer<String> log) {

@@ -135,14 +135,12 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         });
         music.restore(settings.musicRestore);
         ticker = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread thread = new Thread(r, "doorbird-ticker");
-            thread.setDaemon(true);
-            return thread;
+            return ThreadGuard.create("doorbird-ticker", r);
         });
-        ticker.scheduleWithFixedDelay(() -> {
+        ticker.scheduleWithFixedDelay(() -> ThreadGuard.run(() -> {
             RingController c = controller;
             if (c != null) c.tick();
-        }, 1, 1, TimeUnit.SECONDS);
+        }), 1, 1, TimeUnit.SECONDS);
         publishText("last_ring", texts.lastRingReading(), texts.noneYet());
         publishControls();
         screenRestore = new ScreenRestore();
@@ -245,6 +243,8 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
 
     @Override public void stop() {
         stopped = true;
+        WakeWordGuard guard = wakeWord;
+        if (guard != null) guard.close();
         host = null;
         DoorbirdEvents client = events;
         events = null;
@@ -365,7 +365,14 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
                 RingController c = controller;
                 State current = c == null ? state : c.state();
                 synchronized (DoorbirdPlugin.this) {
-                    if (callVolume == null) callVolume = new CallVolume(context);
+                    if (callVolume == null) callVolume = new CallVolume(context, settings.callVolumeRestore, previous -> {
+                        PluginHost currentHost = host;
+                        if (currentHost == null) return;
+                        try {
+                            currentHost.updateSettings(Collections.<String, Object>singletonMap("callVolumeRestore", (double) previous));
+                            remember("callVolumeRestore", (double) previous);
+                        } catch (RuntimeException | LinkageError unavailable) {}
+                    });
                     if (callMode == null) callMode = new CallMode(context);
                 }
                 DoorbellView created = new DoorbellView(context, theme, t, name, current, liveCallVolume, new DoorbellView.Callback() {
@@ -416,6 +423,8 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
 
     @Override public void closeViewer() {
         log("viewer: close");
+        WakeWordGuard guard = wakeWord;
+        if (guard != null) guard.setActive(false);
         MusicPause m = music;
         if (m != null) m.setActive(false);
         PluginHost h = host;
@@ -552,7 +561,9 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         long delay = Math.min(5_000, 1_000L << Math.min(talkRetries, 3));
         talkRetries++;
         log("talk: reopening in " + delay / 1000 + " s");
-        t.schedule(() -> reopenTalk(generation), delay, TimeUnit.MILLISECONDS);
+        try {
+            t.schedule(() -> ThreadGuard.run(() -> reopenTalk(generation)), delay, TimeUnit.MILLISECONDS);
+        } catch (java.util.concurrent.RejectedExecutionException stopped) {}
     }
 
     private synchronized void reopenTalk(int generation) {
@@ -571,7 +582,7 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         if (h == null) return;
         Settings s = settings;
         Texts t = texts;
-        Thread thread = new Thread(() -> {
+        Thread thread = ThreadGuard.create(() -> {
             try {
                 h.setupResult(run, "running", t.checking());
                 ConnectionCheck.Result result = ConnectionCheck.run(s, headless, new ConnectionCheck.Player() {
@@ -592,7 +603,7 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
     }
 
     private static void releaseLater(Runnable release) {
-        Thread thread = new Thread(release, "doorbird-cleanup");
+        Thread thread = ThreadGuard.create("doorbird-cleanup", release);
         thread.setDaemon(true);
         thread.start();
     }
@@ -631,7 +642,9 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         long delay = Math.min(5_000, 1_000L << Math.min(reconnects, 3));
         reconnects++;
         log("media: reopening the stream in " + delay / 1000 + " s");
-        t.schedule(() -> reopenStream(generation), delay, TimeUnit.MILLISECONDS);
+        try {
+            t.schedule(() -> ThreadGuard.run(() -> reopenStream(generation)), delay, TimeUnit.MILLISECONDS);
+        } catch (java.util.concurrent.RejectedExecutionException stopped) {}
     }
 
     private synchronized void reopenStream(int generation) {
@@ -710,7 +723,9 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         if (owner != videoOwner) return;
         videoOwner = null;
         if (stream != null) stream.attachVideo(null);
-        release(videoRenderer, videoSurface);
+        final VideoRenderer oldVideo = videoRenderer;
+        final Surface oldSurface = videoSurface;
+        releaseLater(() -> release(oldVideo, oldSurface));
         videoRenderer = null;
         videoSurface = null;
     }
@@ -742,7 +757,7 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         audioRenderer = null;
         if (callVolume != null) callVolume.restore();
         if (callMode != null) callMode.leave();
-        Thread cleanup = new Thread(() -> {
+        Thread cleanup = ThreadGuard.create(() -> {
             release(oldVideo, oldSurface);
             try { if (oldStream != null) oldStream.stop(); } catch (RuntimeException ignored) {}
             if (oldMic != null) oldMic.release();
@@ -792,11 +807,13 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         }
         ScheduledExecutorService t = ticker;
         if (t == null) return;
-        unduck = t.schedule(() -> {
-            synchronized (DoorbirdPlugin.this) {
-                if (!talking && audioRenderer != null) audioRenderer.setDuck(1f);
-            }
-        }, DUCK_TAIL_MILLIS, TimeUnit.MILLISECONDS);
+        try {
+            unduck = t.schedule(() -> ThreadGuard.run(() -> {
+                synchronized (DoorbirdPlugin.this) {
+                    if (!talking && audioRenderer != null) audioRenderer.setDuck(1f);
+                }
+            }), DUCK_TAIL_MILLIS, TimeUnit.MILLISECONDS);
+        } catch (java.util.concurrent.RejectedExecutionException stopped) {}
     }
 
     private void showMessage(String message) {
@@ -909,7 +926,7 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         private final String name;
         final boolean ring, chime, wakeScreen, wakeWordRestore, musicRestore, callMode, pushToTalk;
         final long autoCloseMillis, maxCallMillis;
-        final int callVolume, chimeVolume, rtspPort;
+        final int callVolume, chimeVolume, rtspPort, callVolumeRestore;
         final List<Cards.Card> cards;
         final List<Cards.Card> callButtons;
         final int columnPosition;
@@ -949,6 +966,9 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
             rtspPort = port instanceof Number && ((Number) port).intValue() >= 1 && ((Number) port).intValue() <= 65535 ? ((Number) port).intValue() : 554;
             Object volume = values.get("callVolume");
             callVolume = volume instanceof Number ? Math.max(0, Math.min(100, ((Number) volume).intValue())) : 70;
+            Object savedVolume = values.get("callVolumeRestore");
+            callVolumeRestore = savedVolume instanceof Number && ((Number) savedVolume).intValue() >= 0 && ((Number) savedVolume).intValue() <= 1000
+                ? ((Number) savedVolume).intValue() : -1;
             cards = Cards.parse(values.get("cards"));
             callButtons = Cards.parseCallButtons(values.get("callButtons"));
             String column = string(values, "landscapeColumn");
