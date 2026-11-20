@@ -4,11 +4,11 @@ A local-only [Kiosk Satellite](https://kiosksatellite.com) plugin for DoorBird v
 
 The plugin connects directly to the DoorBird. It needs no DoorBird cloud account, Home Assistant automation, go2rtc, Scrypted or restreamer. Optional cards and actions use Kiosk Satellite's existing Home Assistant connection.
 
-**Status:** the protocols, tests and Android package have been checked locally with a simulated DoorBird. Real DoorBird models, Android video decoding, microphone behavior and echo cancellation still need device testing.
+**Status:** live-tested on an RK3576S Kiosk Satellite panel with a DoorBird: HTTP-monitor ringing, 1280×720 H.264 hardware video, listening and wake-word mute/restoration were verified. Two-way microphone use, UDP event reception and compatibility with other DoorBird models and Android devices remain untested.
 
 ## Features
 
-- Encrypted DoorBird event-monitoring v2 broadcasts on UDP ports 6524 and 35344, with duplicate suppression and reconnect after setup failures.
+- **Both local event paths:** a reliable persistent HTTP `monitor.cgi` stream and encrypted DoorBird event-monitoring v2 broadcasts on UDP ports 6524 and 35344. Either path opens the viewer; duplicate rings are suppressed. HTTP reconnects after a dropped connection, and UDP retries setup failures.
 - Live H.264/H.265 video over local RTSP, decoded by Android hardware where supported.
 - Listening and two-way audio through DoorBird's local G.711 mu-law HTTP API.
 - Full-screen ringing and call screen with speaker, microphone, hang-up, volume, push-to-talk and automatic call limits.
@@ -22,10 +22,10 @@ The plugin connects directly to the DoorBird. It needs no DoorBird cloud account
 ## Requirements
 
 - Kiosk Satellite **2026.10.42 or newer**, Android **8.0/API 26 or newer**.
-- A DoorBird with current firmware supporting **event monitoring v2**.
+- A DoorBird with current firmware supporting `monitor.cgi`. The optional encrypted UDP path additionally needs **event monitoring v2**.
 - A DoorBird user and password. A separate user for the panel is recommended.
 - Network access from the panel to the DoorBird on HTTP port **80** and RTSP port **554** (configurable).
-- UDP broadcasts from the DoorBird must reach the panel on ports **6524** and **35344**. Across VLANs or filtered networks, the normal broadcasts may need explicit forwarding; a separate subnet without broadcast forwarding will not deliver rings.
+- The HTTP event monitor needs only HTTP port **80** and works without UDP broadcast forwarding. For the additional UDP path, DoorBird broadcasts on ports **6524** and **35344** must reach the panel; filtered networks and VLANs may need explicit forwarding. Each monitor connection uses one of DoorBird's limited concurrent monitor streams.
 - **Watch always** permission for manual live view outside a recent ring. API-Operator permission is not required.
 - A speaker and microphone for calls. No recordings are stored.
 
@@ -46,7 +46,7 @@ Or search for `DoorBird Intercom` in **Settings > Plugin Manager > Browse plugin
 3. Review the source, requested capabilities and README, then choose **Trust and install**.
 4. Enable **DoorBird Intercom** and open its settings.
 
-For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.4.zip`. Update without uninstalling to retain settings.
+For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.5.zip`. Update without uninstalling to retain settings.
 
 ## Setup
 
@@ -107,7 +107,7 @@ The plugin also fires **Doorbell pressed**, **Call screen opened**, **Call scree
 
 | Problem | What to check |
 |---|---|
-| Login works but no ring arrives | UDP broadcast forwarding on ports 6524/35344, event-monitoring v2 firmware, and that panel and DoorBird share the required broadcast domain |
+| Login works but no ring arrives | UDP broadcast forwarding on ports 6524/35344, event-monitoring v2 firmware, and that panel and DoorBird share the required broadcast domain. The logs show socket setup, the Wi-Fi multicast lock and whether a UDP v2 packet arrives or is rejected. |
 | No video | RTSP port, selected Video path, Watch always permission, and whether the official app has taken the call |
 | No sound or the door cannot hear you | DoorBird user permissions, another active call, Kiosk Satellite's microphone permission and microphone source |
 | Echo or feedback | Voice communication source, Android call mode, lower volume or Push to talk |

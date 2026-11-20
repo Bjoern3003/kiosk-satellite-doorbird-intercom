@@ -61,7 +61,7 @@ public final class TextsTest {
             if (method.getName().equals("get") || method.getName().equals("format") || method.getName().equals("haState")) continue;
             if (!english.containsKey(method.getName())) throw new AssertionError("English has no text for " + method.getName());
         }
-        check(en.connectedTo("Front door"), "Connected to Front door");
+        check(en.connectedTo("Front door"), "Listening for rings from Front door");
         check(en.afterRing(382), "382 ms after the ring");
         check(Texts.of("Deutsch").answer(), "Annehmen");
         check(en.haState("armed_away"), "Armed away");

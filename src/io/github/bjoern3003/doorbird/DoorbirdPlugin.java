@@ -286,6 +286,10 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
                 status(connected ? t.connectedTo(s.name(t)) : t.doorbellProblem(shown), !connected && !connecting);
             }
 
+            @Override public void onDiagnostic(String message) {
+                if (events == self[0]) log(message);
+            }
+
             @Override public void onRing(String button) {
                 RingController c = controller;
                 if (c == null || events != self[0]) return;

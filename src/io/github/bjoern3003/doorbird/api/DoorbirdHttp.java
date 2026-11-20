@@ -92,6 +92,10 @@ public final class DoorbirdHttp {
     public Exchange openGet(String path) throws IOException {
         for (int attempt = 0; attempt < 2; attempt++) {
             HttpURLConnection connection = connection("GET", path, 5_000, 10_000);
+            if (path.startsWith("/bha-api/monitor.cgi")) {
+                connection.setReadTimeout(0);
+                connection.setRequestProperty("Connection", "Keep-Alive");
+            }
             try {
                 int status = connection.getResponseCode();
                 if (status == 401 && attempt == 0 && challenge(connection)) {
