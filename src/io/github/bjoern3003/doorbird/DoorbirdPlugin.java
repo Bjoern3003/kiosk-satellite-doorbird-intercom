@@ -272,7 +272,7 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         }
         DoorbirdEvents[] self = new DoorbirdEvents[1];
         DoorbirdHttp api = new DoorbirdHttp(s.host, 80, s.username, s.password);
-        DoorbirdEvents client = new DoorbirdEvents(api, s.username, new DoorbirdEvents.Listener() {
+        DoorbirdEvents client = new DoorbirdEvents(api, s.username, applicationContext(), new DoorbirdEvents.Listener() {
             private String logged = "";
 
             @Override public void onConnection(boolean connected, String detail) {
@@ -313,6 +313,14 @@ public final class DoorbirdPlugin implements KioskPlugin, RingController.Actions
         else if (result == PressGate.Result.SILENT_PRESS) {
             log("ring: off on this device (Ring on this device), so only Last ring and Doorbell pressed");
             fireTrigger("doorbellPressed");
+        }
+    }
+
+    private static Context applicationContext() {
+        try {
+            return (Context) Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null);
+        } catch (Throwable unavailable) {
+            return null;
         }
     }
 

@@ -42,6 +42,7 @@ public final class DoorbirdEvents {
     private final DoorbirdHttp api;
     private final String username;
     private final Listener listener;
+    private final Context appContext;
     private final List<DatagramSocket> sockets = new ArrayList<>();
     private final List<Thread> threads = new ArrayList<>();
     private final Map<String, Long> recent = new ConcurrentHashMap<>();
@@ -52,8 +53,13 @@ public final class DoorbirdEvents {
     private Thread monitorThread;
 
     public DoorbirdEvents(DoorbirdHttp api, String username, Listener listener) {
+        this(api, username, null, listener);
+    }
+
+    public DoorbirdEvents(DoorbirdHttp api, String username, Context appContext, Listener listener) {
         this.api = api;
         this.username = username;
+        this.appContext = appContext;
         this.listener = listener;
     }
 
@@ -103,12 +109,6 @@ public final class DoorbirdEvents {
                 listener.onConnection(false, "connecting");
                 DoorbirdHttp.Session session = api.session();
                 if (!running) return;
-                acquireMulticastLock();
-                if (!running) {
-                    WifiManager.MulticastLock lock = multicastLock;
-                    if (lock != null) lock.release();
-                    return;
-                }
                 for (int port : PORTS) {
                     try {
                         DatagramSocket socket = new DatagramSocket(null);
@@ -120,6 +120,7 @@ public final class DoorbirdEvents {
                         synchronized (this) {
                             if (!running) { socket.close(); return; }
                             sockets.add(socket);
+                            if (sockets.size() == 1) acquireMulticastLock();
                             threads.add(ThreadGuard.start("doorbird-events-" + port, () -> receive(socket, session.notificationKey)));
                         }
                     } catch (Exception refused) {
@@ -197,8 +198,7 @@ public final class DoorbirdEvents {
     private void acquireMulticastLock() {
         if (multicastLock != null) return;
         try {
-            Context app = (Context) Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null);
-            WifiManager wifi = app == null ? null : (WifiManager) app.getSystemService(Context.WIFI_SERVICE);
+            WifiManager wifi = appContext == null ? null : (WifiManager) appContext.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             if (wifi == null) return;
             WifiManager.MulticastLock lock = wifi.createMulticastLock("doorbird-intercom-events");
             lock.setReferenceCounted(false);

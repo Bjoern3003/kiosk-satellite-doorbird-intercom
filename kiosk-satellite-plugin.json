@@ -3,7 +3,7 @@
   "apiVersion": 1,
   "id": "doorbird-intercom",
   "name": "DoorBird Intercom",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "minAndroidSdk": 26,
   "minAppVersion": "2026.10.42",
   "entryClass": "io.github.bjoern3003.doorbird.DoorbirdPlugin",

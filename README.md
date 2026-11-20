@@ -46,7 +46,7 @@ Or search for `DoorBird Intercom` in **Settings > Plugin Manager > Browse plugin
 3. Review the source, requested capabilities and README, then choose **Trust and install**.
 4. Enable **DoorBird Intercom** and open its settings.
 
-For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.5.zip`. Update without uninstalling to retain settings.
+For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.6.zip`. Update without uninstalling to retain settings.
 
 ## Setup
 
@@ -101,6 +101,7 @@ The plugin also fires **Doorbell pressed**, **Call screen opened**, **Call scree
 - The microphone runs only after Answer, Microphone or Talk is activated. Closing a call, background cleanup and the call time limit stop it. Push-to-talk keeps the recorder open but muted between holds.
 - No analytics, cloud connections, audio recording or video recording are included.
 - Audio latency and echo depend on the Android panel. Try **Voice communication**, keep **Android call mode** enabled, lower call volume, or use **Push to talk** if echo occurs.
+- If the plugin is **disabled during a call**, a wake word it muted stays muted until the plugin is enabled again and its startup restoration runs. If it is **uninstalled during a call**, it cannot restore the wake word because Kiosk Satellite revokes host commands before `stop()`. In that case, turn off Kiosk Satellite's own wake-word mute setting manually. End active calls before disabling or uninstalling the plugin.
 - Automated tests do not prove Android rendering, microphone capture, echo cancellation or compatibility with every DoorBird firmware/model.
 
 ## Troubleshooting
