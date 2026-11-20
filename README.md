@@ -31,12 +31,22 @@ The plugin connects directly to the DoorBird. It needs no DoorBird cloud account
 
 ## Installation
 
+### Community Plugins (Recommended)
+
+DoorBird Intercom is listed in [Community Plugins](https://kiosksatellite.com/plugins/). Use the button below to open it in your Kiosk Satellite and install it.
+
+[![Install in Kiosk Satellite](https://kiosksatellite.com/img/badges/plugin-add.svg)](https://kiosksatellite.com/redirect/plugin/?repository=Bjoern3003/kiosk-satellite-doorbird-intercom)
+
+Or search for `DoorBird Intercom` in **Settings > Plugin Manager > Browse plugins** in Kiosk Satellite.
+
+### Manual
+
 1. In Kiosk Satellite, open **Settings > Plugin Manager** and enable **Enable Plugins**.
 2. Choose **Add plugin**, enter `https://github.com/Bjoern3003/kiosk-satellite-doorbird-intercom`, then **Preview**.
 3. Review the source, requested capabilities and README, then choose **Trust and install**.
 4. Enable **DoorBird Intercom** and open its settings.
 
-For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.2.zip`. Update without uninstalling to retain settings.
+For a local build, use **Plugin Manager > Developer Tools > Install from ZIP** and select `dist/doorbird-intercom-1.0.3.zip`. Update without uninstalling to retain settings.
 
 ## Setup
 
